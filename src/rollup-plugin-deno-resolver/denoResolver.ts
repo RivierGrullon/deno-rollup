@@ -1,3 +1,5 @@
+import { emit } from "https://deno.land/x/emit@0.0.1/mod.ts";
+import type { EmitOptions } from "https://deno.land/x/emit@0.0.1/mod.ts";
 import type { Plugin } from "../../deps.ts";
 import { parse } from "./parse.ts";
 import { isTypescript } from "./isTypescript.ts";
@@ -11,7 +13,7 @@ import { handleUnresolvedId } from "./handleUnresolvedId.ts";
  */
 export type DenoResolverOptions = {
   fetchOpts?: RequestInit;
-  compilerOpts?: Deno.CompilerOptions;
+  emitOpts?: EmitOptions;
 };
 
 /**
@@ -28,12 +30,12 @@ export type DenoResolverOptions = {
  *
  * @param {DenoResolverOptions} [opts]
  * @param {RequestInit} [opts.fetchOpts]
- * @param {Deno.CompilerOptions} [opts.compilerOpts]
+ * @param {EmitOptions} [opts.emitOps]
  * @returns {Plugin}
  * @public
  */
 export function denoResolver(
-  { fetchOpts, compilerOpts }: DenoResolverOptions = {},
+  { fetchOpts, emitOpts }: DenoResolverOptions = {},
 ): Plugin | never {
   return {
     name: "rollup-plugin-deno-resolver",
@@ -72,18 +74,11 @@ export function denoResolver(
 
       if (isTypescript(url.href)) {
         const outputUrlHref = `${url.href}.js`;
-        const { files: { [outputUrlHref]: output } } = await Deno.emit(
-          url,
-          {
-            check: false,
-            compilerOptions: compilerOpts,
-            sources: {
-              [url.href]: code,
-            },
-          },
+        const files: Record<string, string> = await emit(
+          url.toString(), emitOpts
         );
 
-        return output;
+        return files[outputUrlHref];
       }
 
       return code;
